@@ -1,8 +1,13 @@
-FROM golang:1.12.1-alpine3.9
-RUN mkdir /app
+# Build
+FROM golang:latest AS build
 ADD . /app
 WORKDIR /app
-RUN apk add --no-cache git
-RUN go build -o main .
-RUN apk del git
-CMD ["/app/main"]
+RUN go mod download
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /main .
+
+# Production
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+COPY --from=build /main ./
+RUN chmod +x ./main
+ENTRYPOINT ["./main"]
